@@ -3,13 +3,15 @@ import { initializeApp } from "firebase/app";
 import { addDoc, collection, getFirestore } from "firebase/firestore";
 import { getAuth, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 
+const assetPath = (filename) => `${import.meta.env.BASE_URL}assets/${filename}`;
+
 const PRODUCTS = [
   {
     id: 1,
     name: "Smart Garden Villa Lamp",
     description: "Weather-ready lamp with motion sensing and warm evening scenes.",
     price: 3999,
-    image: "/assets/smart-garden-villa-lamp.jpg",
+    image: assetPath("smart-garden-villa-lamp.jpg"),
     category: "villa",
     tags: ["smart", "outdoor", "lighting"]
   },
@@ -18,7 +20,7 @@ const PRODUCTS = [
     name: "Modular Oak Coffee Table",
     description: "Compact table with hidden storage for modern living rooms.",
     price: 7499,
-    image: "/assets/modular-oak-coffee-table.jpg",
+    image: assetPath("modular-oak-coffee-table.jpg"),
     category: "furniture",
     tags: ["living", "storage", "wood"]
   },
@@ -27,7 +29,7 @@ const PRODUCTS = [
     name: "Voice Control Hub",
     description: "Connects home devices, routines, lighting, and appliances in one place.",
     price: 5299,
-    image: "/assets/voice-control-hub.jpg",
+    image: assetPath("voice-control-hub.jpg"),
     category: "smart-home",
     tags: ["smart", "automation", "voice"]
   },
@@ -36,7 +38,7 @@ const PRODUCTS = [
     name: "Premium Villa Security Kit",
     description: "Door sensors, indoor camera, and instant phone alerts for larger homes.",
     price: 12999,
-    image: "/assets/premium-villa-security-kit.jpg",
+    image: assetPath("premium-villa-security-kit.jpg"),
     category: "villa",
     tags: ["security", "smart", "camera"]
   },
@@ -45,7 +47,7 @@ const PRODUCTS = [
     name: "Ergonomic Work Chair",
     description: "Breathable mesh chair with adjustable lumbar support and tilt control.",
     price: 8999,
-    image: "/assets/ergonomic-work-chair.jpg",
+    image: assetPath("ergonomic-work-chair.jpg"),
     category: "furniture",
     tags: ["office", "comfort", "mesh"]
   },
@@ -54,7 +56,7 @@ const PRODUCTS = [
     name: "Smart Energy Monitor",
     description: "Tracks appliance usage and helps optimize daily power consumption.",
     price: 4599,
-    image: "/assets/smart-energy-monitor.jpg",
+    image: assetPath("smart-energy-monitor.jpg"),
     category: "smart-home",
     tags: ["energy", "smart", "savings"]
   }
