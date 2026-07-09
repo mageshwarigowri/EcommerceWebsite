@@ -1,0 +1,16 @@
+# Python / Django
+.venv/
+__pycache__/
+*.py[cod]
+db.sqlite3
+media/
+
+# Node / previous Vite prototype
+node_modules/
+dist/
+
+# Local/editor noise
+.env
+.DS_Store
+Thumbs.db
+~$*.docx

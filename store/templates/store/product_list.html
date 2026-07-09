@@ -1,0 +1,154 @@
+{% load static humanize %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ecommerce App</title>
+    <link rel="stylesheet" href="{% static 'store/styles.css' %}">
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar__inner">
+        <a class="brand" href="{% url 'store:home' %}">
+          <span>Ecommerce App</span>
+          <strong>Curated Home Essentials</strong>
+        </a>
+
+        <div class="topbar__actions">
+          <form class="search" action="{% url 'store:home' %}" method="get">
+            <input
+              type="search"
+              name="q"
+              value="{{ search_query }}"
+              placeholder="Search products..."
+              aria-label="Search products"
+            >
+            <button class="button button--dark search__button" type="submit">Search</button>
+          </form>
+
+          <button class="cart-button" type="button" data-cart-toggle aria-label="Toggle shopping cart">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="8" cy="21" r="1"></circle>
+              <circle cx="19" cy="21" r="1"></circle>
+              <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h8.8a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path>
+            </svg>
+            <span data-cart-count>{{ cart.count }}</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    {% if messages %}
+      <div class="messages" data-messages>
+        {% for message in messages %}
+          <div class="message message--{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div id="cart-drawer" class="cart-drawer" data-cart-drawer hidden>
+      {% include "store/partials/cart_drawer.html" %}
+    </div>
+
+    <main>
+      <section class="catalog">
+        <div class="catalog__header">
+          <div>
+            <p class="eyebrow">Catalog</p>
+            <h1>{% if selected_category %}{{ selected_category.name }}{% else %}Shop products{% endif %}</h1>
+          </div>
+          <p class="muted">{{ products|length }} product{{ products|length|pluralize }} found</p>
+        </div>
+
+        <nav class="category-nav" aria-label="Product categories">
+          <a class="{% if not selected_category %}is-active{% endif %}" href="{% url 'store:home' %}">All</a>
+          {% for category in categories %}
+            <a
+              class="{% if selected_category.id == category.id %}is-active{% endif %}"
+              href="{{ category.get_absolute_url }}"
+            >
+              {{ category.name }}
+            </a>
+          {% endfor %}
+        </nav>
+
+        {% if products %}
+          <div class="product-grid">
+            {% for product in products %}
+              <article class="product-card">
+                <div class="product-card__media">
+                  {% if product.image %}
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                  {% else %}
+                    <div class="missing-image">Image not found</div>
+                  {% endif %}
+                </div>
+                <div class="product-card__body">
+                  <p class="product-card__category">{{ product.category.name }}</p>
+                  <h2>{{ product.name }}</h2>
+                  <p class="product-card__description">{{ product.description }}</p>
+                  <p class="product-card__price">&#8377;{{ product.price|floatformat:0|intcomma }}</p>
+                  <form class="add-to-cart-form" method="post" action="{% url 'store:add_to_cart' product.id %}">
+                    {% csrf_token %}
+                    <button class="button button--primary" type="submit">Add to Cart</button>
+                  </form>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state">No products found.</div>
+        {% endif %}
+      </section>
+
+      <section id="checkout" class="checkout" data-checkout hidden>
+        <form class="checkout__form" action="{% url 'store:checkout' %}" method="post">
+          {% csrf_token %}
+          <div class="checkout__heading">
+            <div>
+              <p class="eyebrow">Checkout</p>
+              <h2>Place your order</h2>
+            </div>
+            <button class="button button--secondary" type="button" data-checkout-close>Cancel</button>
+          </div>
+
+          <label>
+            <span>Full name</span>
+            <input name="full_name" placeholder="Your full name" required>
+          </label>
+          <label>
+            <span>Email</span>
+            <input type="email" name="email" placeholder="you@example.com" required>
+          </label>
+          <label>
+            <span>Address</span>
+            <textarea name="address" placeholder="Delivery address" required></textarea>
+          </label>
+
+          <button class="button button--primary checkout__submit" type="submit">Place Order</button>
+        </form>
+
+        <aside class="checkout__summary">
+          <h3>Order Summary</h3>
+          <div data-checkout-summary>
+            {% for item in cart.items %}
+              <div class="summary-row">
+                <span>{{ item.product.name }} x {{ item.quantity }}</span>
+                <strong>&#8377;{{ item.line_total|floatformat:0|intcomma }}</strong>
+              </div>
+            {% empty %}
+              <p class="muted">Your cart is empty.</p>
+            {% endfor %}
+          </div>
+          <div class="summary-total">
+            <span>Grand Total</span>
+            <strong>&#8377;{{ cart.total|floatformat:0|intcomma }}</strong>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script src="{% static 'store/app.js' %}"></script>
+  </body>
+</html>
