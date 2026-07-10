@@ -2,8 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { initializeApp } from "firebase/app";
 import { addDoc, collection, getFirestore } from "firebase/firestore";
 import { getAuth, signInAnonymously, signInWithCustomToken } from "firebase/auth";
-
-const assetPath = (filename) => `${import.meta.env.BASE_URL}assets/${filename}`;
+import chairImage from "./assets/Chair.webp";
+import coffeeTableImage from "./assets/CoffeeTable.avif";
+import energyMeterImage from "./assets/EnergyMeter.jpeg";
+import securityKitImage from "./assets/SecurityKit.jpeg";
+import smartHomeHubImage from "./assets/SmartHomeHub.jpg";
+import villaLampImage from "./assets/VillaLamp.avif";
 
 const PRODUCTS = [
   {
@@ -11,7 +15,7 @@ const PRODUCTS = [
     name: "Smart Garden Villa Lamp",
     description: "Weather-ready lamp with motion sensing and warm evening scenes.",
     price: 3999,
-    image: assetPath("smart-garden-villa-lamp.jpg"),
+    image: villaLampImage,
     category: "villa",
     tags: ["smart", "outdoor", "lighting"]
   },
@@ -20,7 +24,7 @@ const PRODUCTS = [
     name: "Modular Oak Coffee Table",
     description: "Compact table with hidden storage for modern living rooms.",
     price: 7499,
-    image: assetPath("modular-oak-coffee-table.jpg"),
+    image: coffeeTableImage,
     category: "furniture",
     tags: ["living", "storage", "wood"]
   },
@@ -29,7 +33,7 @@ const PRODUCTS = [
     name: "Voice Control Hub",
     description: "Connects home devices, routines, lighting, and appliances in one place.",
     price: 5299,
-    image: assetPath("voice-control-hub.jpg"),
+    image: smartHomeHubImage,
     category: "smart-home",
     tags: ["smart", "automation", "voice"]
   },
@@ -38,7 +42,7 @@ const PRODUCTS = [
     name: "Premium Villa Security Kit",
     description: "Door sensors, indoor camera, and instant phone alerts for larger homes.",
     price: 12999,
-    image: assetPath("premium-villa-security-kit.jpg"),
+    image: securityKitImage,
     category: "villa",
     tags: ["security", "smart", "camera"]
   },
@@ -47,7 +51,7 @@ const PRODUCTS = [
     name: "Ergonomic Work Chair",
     description: "Breathable mesh chair with adjustable lumbar support and tilt control.",
     price: 8999,
-    image: assetPath("ergonomic-work-chair.jpg"),
+    image: chairImage,
     category: "furniture",
     tags: ["office", "comfort", "mesh"]
   },
@@ -56,7 +60,7 @@ const PRODUCTS = [
     name: "Smart Energy Monitor",
     description: "Tracks appliance usage and helps optimize daily power consumption.",
     price: 4599,
-    image: assetPath("smart-energy-monitor.jpg"),
+    image: energyMeterImage,
     category: "smart-home",
     tags: ["energy", "smart", "savings"]
   }
@@ -99,7 +103,7 @@ function ProductImage({ product, className = "" }) {
   );
 }
 
-function ProductCard({ product, onAddToCart }) {
+function ProductCard({ product, quantity = 0, onAddToCart, onIncrement, onDecrement }) {
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white text-center shadow-sm transition duration-200 hover:-translate-y-1 hover:border-teal-500 hover:shadow-lg">
       <div className="overflow-hidden bg-slate-100">
@@ -119,13 +123,33 @@ function ProductCard({ product, onAddToCart }) {
         <p className="text-xl font-bold text-slate-950">
           {currencyFormatter.format(product.price)}
         </p>
-        <button
-          type="button"
-          onClick={() => onAddToCart(product)}
-          className="professional-button professional-button-primary"
-        >
-          Add to Cart
-        </button>
+        {quantity > 0 ? (
+          <div className="quantity-control" aria-label={`${product.name} quantity`}>
+            <button
+              type="button"
+              onClick={() => onDecrement(product)}
+              aria-label={`Decrease ${product.name} quantity`}
+            >
+              -
+            </button>
+            <span>{quantity}</span>
+            <button
+              type="button"
+              onClick={() => onIncrement(product)}
+              aria-label={`Increase ${product.name} quantity`}
+            >
+              +
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onAddToCart(product)}
+            className="professional-button professional-button-primary"
+          >
+            Add to Cart
+          </button>
+        )}
       </div>
     </article>
   );
@@ -201,14 +225,20 @@ function Cart({ cartItems, onClose, onCheckout }) {
   );
 }
 
-function CheckoutForm({ cartItems, onPlaceOrder, onCancel }) {
+function CheckoutPage({ cartItems, onPlaceOrder, onBack }) {
   const [formData, setFormData] = useState({
     fullName: "",
     address: "",
-    email: ""
+    email: "",
+    upiId: "",
+    cardNumber: "",
+    cardName: "",
+    cardExpiry: "",
+    cardCvv: ""
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("upi");
 
   const grandTotal = cartItems.reduce(
     (total, item) => total + item.price * item.quantity,
@@ -227,6 +257,21 @@ function CheckoutForm({ cartItems, onPlaceOrder, onCancel }) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       nextErrors.email = "Enter a valid email address.";
     }
+    if (paymentMethod === "upi" && !/^[\w.-]+@[\w.-]+$/.test(formData.upiId)) {
+      nextErrors.upiId = "Enter a valid UPI ID.";
+    }
+    if (paymentMethod === "card") {
+      if (!/^\d{12,19}$/.test(formData.cardNumber.replace(/\s/g, ""))) {
+        nextErrors.cardNumber = "Enter a valid card number.";
+      }
+      if (!formData.cardName.trim()) nextErrors.cardName = "Name on card is required.";
+      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(formData.cardExpiry)) {
+        nextErrors.cardExpiry = "Use MM/YY format.";
+      }
+      if (!/^\d{3,4}$/.test(formData.cardCvv)) {
+        nextErrors.cardCvv = "Enter a valid CVV.";
+      }
+    }
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -236,12 +281,12 @@ function CheckoutForm({ cartItems, onPlaceOrder, onCancel }) {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    await onPlaceOrder(formData, grandTotal);
+    await onPlaceOrder({ ...formData, paymentMethod }, grandTotal);
     setIsSubmitting(false);
   };
 
   return (
-    <section className="border-t border-slate-200 bg-white py-10">
+    <section className="bg-white py-10">
       <div className="checkout-grid mx-auto max-w-6xl px-4 lg:grid-cols-[1fr_380px]">
         <form onSubmit={handleSubmit} className="rounded-lg border border-slate-200 p-6">
           <div className="mb-6 flex items-start justify-between gap-4">
@@ -253,10 +298,10 @@ function CheckoutForm({ cartItems, onPlaceOrder, onCancel }) {
             </div>
             <button
               type="button"
-              onClick={onCancel}
+              onClick={onBack}
               className="professional-button professional-button-secondary"
             >
-              Cancel
+              Back to Shop
             </button>
           </div>
 
@@ -296,6 +341,102 @@ function CheckoutForm({ cartItems, onPlaceOrder, onCancel }) {
             {errors.address && <span className="mt-1 block text-sm text-red-600">{errors.address}</span>}
           </label>
 
+          <div className="mb-6">
+            <span className="mb-3 block text-sm font-semibold text-slate-700">Payment method</span>
+            <div className="payment-options">
+              {[
+                { id: "upi", label: "UPI" },
+                { id: "card", label: "Card" },
+                { id: "cod", label: "COD" }
+              ].map((option) => (
+                <label
+                  key={option.id}
+                  className={`payment-option ${paymentMethod === option.id ? "is-selected" : ""}`}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value={option.id}
+                    checked={paymentMethod === option.id}
+                    onChange={(event) => setPaymentMethod(event.target.value)}
+                  />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {paymentMethod === "upi" && (
+            <label className="mb-6 block">
+              <span className="mb-2 block text-sm font-semibold text-slate-700">UPI ID</span>
+              <input
+                name="upiId"
+                value={formData.upiId}
+                onChange={handleChange}
+                className="w-full rounded-md border border-slate-300 px-4 py-3"
+                placeholder="name@bank"
+              />
+              {errors.upiId && <span className="mt-1 block text-sm text-red-600">{errors.upiId}</span>}
+            </label>
+          )}
+
+          {paymentMethod === "card" && (
+            <div className="mb-6">
+              <label className="mb-4 block">
+                <span className="mb-2 block text-sm font-semibold text-slate-700">Card number</span>
+                <input
+                  name="cardNumber"
+                  value={formData.cardNumber}
+                  onChange={handleChange}
+                  className="w-full rounded-md border border-slate-300 px-4 py-3"
+                  placeholder="1234 5678 9012 3456"
+                />
+                {errors.cardNumber && <span className="mt-1 block text-sm text-red-600">{errors.cardNumber}</span>}
+              </label>
+              <label className="mb-4 block">
+                <span className="mb-2 block text-sm font-semibold text-slate-700">Name on card</span>
+                <input
+                  name="cardName"
+                  value={formData.cardName}
+                  onChange={handleChange}
+                  className="w-full rounded-md border border-slate-300 px-4 py-3"
+                  placeholder="Card holder name"
+                />
+                {errors.cardName && <span className="mt-1 block text-sm text-red-600">{errors.cardName}</span>}
+              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-slate-700">Expiry</span>
+                  <input
+                    name="cardExpiry"
+                    value={formData.cardExpiry}
+                    onChange={handleChange}
+                    className="w-full rounded-md border border-slate-300 px-4 py-3"
+                    placeholder="MM/YY"
+                  />
+                  {errors.cardExpiry && <span className="mt-1 block text-sm text-red-600">{errors.cardExpiry}</span>}
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-slate-700">CVV</span>
+                  <input
+                    name="cardCvv"
+                    value={formData.cardCvv}
+                    onChange={handleChange}
+                    className="w-full rounded-md border border-slate-300 px-4 py-3"
+                    placeholder="123"
+                  />
+                  {errors.cardCvv && <span className="mt-1 block text-sm text-red-600">{errors.cardCvv}</span>}
+                </label>
+              </div>
+            </div>
+          )}
+
+          {paymentMethod === "cod" && (
+            <div className="mb-6 rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+              Pay with cash when your order is delivered.
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={isSubmitting || cartItems.length === 0}
@@ -327,7 +468,7 @@ function CheckoutForm({ cartItems, onPlaceOrder, onCancel }) {
   );
 }
 
-function Recommendations({ products, onAddToCart }) {
+function Recommendations({ products, cartItems, onAddToCart, onIncrement, onDecrement }) {
   return (
     <section className="mx-auto max-w-6xl px-4 pb-12">
       <div className="mb-5">
@@ -338,7 +479,14 @@ function Recommendations({ products, onAddToCart }) {
       </div>
       <div className="product-grid sm:grid-cols-2 lg:grid-cols-3">
         {products.map((product) => (
-          <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} />
+          <ProductCard
+            key={product.id}
+            product={product}
+            quantity={cartItems.find((item) => item.id === product.id)?.quantity || 0}
+            onAddToCart={onAddToCart}
+            onIncrement={onIncrement}
+            onDecrement={onDecrement}
+          />
         ))}
       </div>
     </section>
@@ -445,6 +593,20 @@ export default function App() {
     generateRecommendations(product.category);
     setIsCartOpen(true);
     setShouldAutoCloseCart(true);
+  };
+
+  const handleIncrementCartItem = (product) => {
+    handleAddToCart(product);
+  };
+
+  const handleDecrementCartItem = (product) => {
+    setCartItems((currentItems) =>
+      currentItems.flatMap((item) => {
+        if (item.id !== product.id) return [item];
+        if (item.quantity <= 1) return [];
+        return [{ ...item, quantity: item.quantity - 1 }];
+      })
+    );
   };
 
   const handlePlaceOrder = async (formData, grandTotal) => {
@@ -565,6 +727,15 @@ export default function App() {
         />
       )}
 
+      {isCheckout ? (
+        <main>
+          <CheckoutPage
+            cartItems={cartItems}
+            onPlaceOrder={handlePlaceOrder}
+            onBack={() => setIsCheckout(false)}
+          />
+        </main>
+      ) : (
       <main>
         <section className="mx-auto max-w-6xl px-4 py-10">
           <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -589,7 +760,10 @@ export default function App() {
                 <ProductCard
                   key={product.id}
                   product={product}
+                  quantity={cartItems.find((item) => item.id === product.id)?.quantity || 0}
                   onAddToCart={handleAddToCart}
+                  onIncrement={handleIncrementCartItem}
+                  onDecrement={handleDecrementCartItem}
                 />
               ))}
             </div>
@@ -599,18 +773,14 @@ export default function App() {
         {recommendedProducts.length > 0 && (
           <Recommendations
             products={recommendedProducts}
-            onAddToCart={handleAddToCart}
-          />
-        )}
-
-        {isCheckout && (
-          <CheckoutForm
             cartItems={cartItems}
-            onPlaceOrder={handlePlaceOrder}
-            onCancel={() => setIsCheckout(false)}
+            onAddToCart={handleAddToCart}
+            onIncrement={handleIncrementCartItem}
+            onDecrement={handleDecrementCartItem}
           />
         )}
       </main>
+      )}
     </div>
   );
 }
